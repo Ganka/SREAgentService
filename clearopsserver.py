@@ -582,6 +582,8 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     ACTIVE_SOCKETS.append(websocket)
     # Replay history so a newly opened dashboard isn't blank
+    print("Origin:", websocket.headers.get("origin"))
+    print("Host:", websocket.headers.get("host"))
     for event in INCIDENT_LOG[-50:]:
         await websocket.send_json(event)
     try:
@@ -849,7 +851,7 @@ const sideBody = document.getElementById('side-body');
 
 let ws;
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws = new WebSocket(`wss://${location.host}/ws`);
   ws.onmessage = (msg) => handleEvent(JSON.parse(msg.data));
   ws.onclose = () => setTimeout(connect, 1000);
 }
