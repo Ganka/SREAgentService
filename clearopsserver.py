@@ -28,6 +28,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
 
 import aiohttp
@@ -57,9 +58,39 @@ AGENT_PORT     = int(os.getenv("AGENT_PORT", "3001"))
 VERCEL_URL     = os.getenv("VERCEL_URL", "")
 
 
+def _cors_origins_from_env(urls: str) -> list[str]:
+    origins = []
+    for raw_url in urls.split(","):
+        raw_url = raw_url.strip().rstrip("/")
+        if not raw_url:
+            continue
+        if "://" not in raw_url:
+            raw_url = f"https://{raw_url}"
+        parsed = urlparse(raw_url)
+        if parsed.scheme and parsed.netloc:
+            origins.append(f"{parsed.scheme}://{parsed.netloc}")
+    return origins
+
+
+CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:5173",
+    *_cors_origins_from_env(VERCEL_URL),
+]
+
+
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ─── WebSocket connection registry + pending approvals ──────────────────────
@@ -1033,4 +1064,3 @@ function renderDecision(ev) {
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=AGENT_PORT)
-
